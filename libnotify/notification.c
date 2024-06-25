@@ -98,7 +98,8 @@ enum
         PROP_SUMMARY,
         PROP_BODY,
         PROP_ICON_NAME,
-        PROP_CLOSED_REASON
+        PROP_CLOSED_REASON,
+        PROP_APP_DURATION
 };
 
 static void     notify_notification_set_property (GObject      *object,
@@ -216,6 +217,9 @@ notify_notification_class_init (NotifyNotificationClass *klass)
                                                               | G_PARAM_STATIC_BLURB));
 
 
+        g_object_class_install_property(object_class,
+                                        PROP_APP_DURATION,
+                                        g_param_spec_string("app-duration", "Application duration","Application duration required to show the notification with filename and icon theme compliant name", NULL, G_PARAM_READWRITE | G_PARAM_STATIC_NAME| G_PARAM_STATIC_NICK|G_PARAM_STATIC_BLURB));
         /**
          * NotifyNotification:summary:
          *
@@ -322,6 +326,9 @@ notify_notification_set_property (GObject      *object,
                                                   g_value_get_string (value));
                 break;
 
+        case PROP_APP_DURATION:
+                notify_notification_set_app_duration(notification, g_value_get_string(value));
+
         case PROP_SUMMARY:
                 notify_notification_update_internal (notification,
                                                      priv->app_name,
@@ -372,6 +379,10 @@ notify_notification_get_property (GObject    *object,
 
         case PROP_APP_NAME:
                 g_value_set_string (value, priv->app_name);
+                break;
+
+        case PROP_APP_DURATION:
+                g_value_set_string(value, priv->app_duration);
                 break;
 
         case PROP_APP_ICON:
@@ -758,6 +769,7 @@ close_notification (NotifyNotification *notification,
         g_signal_emit (notification, signals[SIGNAL_CLOSED], 0);
         notification->priv->id = 0;
         g_object_unref (G_OBJECT (notification));
+        printf("Notification is closing");
 
         return TRUE;
 }

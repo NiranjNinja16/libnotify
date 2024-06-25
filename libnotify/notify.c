@@ -151,7 +151,6 @@ set_app_name (const char *app_name)
         return TRUE;
 }
 
-
 static gboolean set_app_duration(const char *app_duration)
 {
         g_return_val_if_fail(app_duration != NULL, FALSE);
@@ -180,7 +179,8 @@ notify_set_app_name (const char *app_name)
 
 void notify_set_app_duration(const char *app_duration)
 {
-        set_app_duration(app_duration);
+        g_free(_app_duration);
+        _app_duration = g_strdup(app_duration);
 }
 
 /**
@@ -469,6 +469,11 @@ const char *
 notify_get_app_name (void)
 {
         return _app_name;
+}
+
+const char* notify_get_app_duration(void)
+{
+        return _app_duration;
 }
 
 /**
