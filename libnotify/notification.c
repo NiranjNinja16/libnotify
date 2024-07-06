@@ -95,11 +95,11 @@ enum
         PROP_ID,
         PROP_APP_NAME,
         PROP_APP_ICON,
+        PROP_APP_DURATION,
         PROP_SUMMARY,
         PROP_BODY,
         PROP_ICON_NAME,
-        PROP_CLOSED_REASON,
-        PROP_APP_DURATION
+        PROP_CLOSED_REASON
 };
 
 static void     notify_notification_set_property (GObject      *object,
@@ -144,6 +144,7 @@ notify_notification_class_init (NotifyNotificationClass *klass)
         object_class->set_property = notify_notification_set_property;
         object_class->dispose = notify_notification_dispose;
         object_class->finalize = notify_notification_finalize;
+        printf("Notification class initialized\n");
 
         /**
 	 * NotifyNotification::closed:
@@ -198,6 +199,7 @@ notify_notification_class_init (NotifyNotificationClass *klass)
                                                               | G_PARAM_STATIC_NICK
                                                               | G_PARAM_STATIC_BLURB));
 
+
         /**
          * NotifyNotification:app-icon:
          *
@@ -216,10 +218,16 @@ notify_notification_class_init (NotifyNotificationClass *klass)
                                                               | G_PARAM_STATIC_NICK
                                                               | G_PARAM_STATIC_BLURB));
 
+        g_object_class_install_property(object_class, PROP_APP_DURATION,
+                                        g_param_spec_string("app-duration",
+                                                            "Application duration",
+                                                            "The application duration to be visible for this notification",
+                                                            NULL,
+                                                            G_PARAM_READWRITE |  G_PARAM_STATIC_NAME |
+                                                            G_PARAM_STATIC_NICK |
+                                                            G_PARAM_STATIC_BLURB));
 
-        g_object_class_install_property(object_class,
-                                        PROP_APP_DURATION,
-                                        g_param_spec_string("app-duration", "Application duration","Application duration required to show the notification with filename and icon theme compliant name", NULL, G_PARAM_READWRITE | G_PARAM_STATIC_NAME| G_PARAM_STATIC_NICK|G_PARAM_STATIC_BLURB));
+
         /**
          * NotifyNotification:summary:
          *
@@ -299,6 +307,14 @@ notify_notification_update_internal (NotifyNotification *notification,
                                      const char         *body,
                                      const char         *icon);
 
+/* static void notify_notification_update_internal (NotifyNotification *notification,
+                                                const char     *app_name,
+                                                const char     *summary,
+                                                const char     *body,
+                                                const char     *icon,
+                                                const char     *duration);
+*/
+
 static void
 notify_notification_set_property (GObject      *object,
                                   guint         prop_id,
@@ -327,7 +343,9 @@ notify_notification_set_property (GObject      *object,
                 break;
 
         case PROP_APP_DURATION:
-                notify_notification_set_app_duration(notification, g_value_get_string(value));
+                notify_notification_set_app_duration (notification,
+                                                        g_value_get_string (value));
+                break;
 
         case PROP_SUMMARY:
                 notify_notification_update_internal (notification,
@@ -381,10 +399,6 @@ notify_notification_get_property (GObject    *object,
                 g_value_set_string (value, priv->app_name);
                 break;
 
-        case PROP_APP_DURATION:
-                g_value_set_string(value, priv->app_duration);
-                break;
-
         case PROP_APP_ICON:
                 g_value_set_string (value, priv->app_icon);
                 break;
@@ -395,6 +409,10 @@ notify_notification_get_property (GObject    *object,
 
         case PROP_ICON_NAME:
                 g_value_set_string (value, priv->icon_name);
+                break;
+
+        case PROP_APP_DURATION:
+                g_value_set_string(value, priv->app_duration);
                 break;
 
         case PROP_CLOSED_REASON:
@@ -469,6 +487,7 @@ notify_notification_finalize (GObject *object)
         g_free (priv->summary);
         g_free (priv->body);
         g_free (priv->icon_name);
+        g_free (priv->app_duration);
         g_free (priv->activation_token);
 
         if (priv->actions != NULL) {
@@ -769,7 +788,6 @@ close_notification (NotifyNotification *notification,
         g_signal_emit (notification, signals[SIGNAL_CLOSED], 0);
         notification->priv->id = 0;
         g_object_unref (G_OBJECT (notification));
-        printf("Notification is closing");
 
         return TRUE;
 }
@@ -1146,6 +1164,7 @@ notify_notification_show (NotifyNotification *notification,
         GVariant                  *result;
         GApplication              *application = NULL;
         const char                *app_icon = NULL;
+        const char                *app_duration=NULL;
 
         g_return_val_if_fail (notification != NULL, FALSE);
         g_return_val_if_fail (NOTIFY_IS_NOTIFICATION (notification), FALSE);
@@ -1227,6 +1246,8 @@ notify_notification_show (NotifyNotification *notification,
             app_icon = priv->icon_name;
         }
 
+        app_duration = priv->app_duration ? priv->app_duration : notify_get_app_duration();
+
         /* TODO: make this nonblocking */
         result = g_dbus_proxy_call_sync (proxy,
                                          "Notify",
@@ -1234,6 +1255,7 @@ notify_notification_show (NotifyNotification *notification,
                                                         priv->app_name ? priv->app_name : notify_get_app_name (),
                                                         priv->id,
                                                         app_icon ? app_icon : "",
+                                                        app_duration ? app_duration : "",
                                                         priv->summary ? priv->summary : "",
                                                         priv->body ? priv->body : "",
                                                         &actions_builder,
